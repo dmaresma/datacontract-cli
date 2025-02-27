@@ -1,0 +1,28 @@
+dataContractSpecification: 1.1.0
+id: s3-csv
+info:
+  title: s30-csv
+  version: 0.0.1
+  owner: my-domain-team
+servers:
+  my-dataproduct/s3:
+    type: s3
+    endpointUrl: __S3_ENDPOINT_URL__
+    location: s3://test-bucket/fixtures/s3-csv/data/sample_data.csv
+    format: csv
+    dataProductId: my-dataproduct
+    outputPortId: s3
+models:
+  my_table:
+    type: table
+    fields:
+      field_one:
+        type: varchar
+        required: true
+        unique: true
+        pattern: "[A-Za-z]{2}-\\d{3}-[A-Za-z]{2}$"
+      field_two:
+        type: bigint
+        minimum: 10
+      field_three:
+        type: timestamp

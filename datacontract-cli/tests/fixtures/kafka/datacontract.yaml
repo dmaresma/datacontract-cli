@@ -1,0 +1,30 @@
+dataContractSpecification: 1.1.0
+id: inventory-events
+info:
+  title: Inventory Events
+  version: 0.0.1
+servers:
+  production:
+    type: kafka
+    topic: inventory-events
+    host: __KAFKA_HOST__
+    format: json
+    dataProductId: inventory
+    outputPortId: s3
+models:
+  inventory:
+    type: table
+    fields:
+      updated_at:
+        type: string
+      available:
+        type: int
+      location:
+        type: string
+      sku:
+        type: string
+quality:
+  type: SodaCL
+  specification:
+    checks for inventory:
+      - row_count >= 10
