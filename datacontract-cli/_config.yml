@@ -1,5 +1,0 @@
-plugins:
-  - jekyll-sitemap
-markdown: kramdown
-name: "Data Contract CLI"
-title: null
