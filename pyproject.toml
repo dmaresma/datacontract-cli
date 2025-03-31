@@ -26,7 +26,7 @@ dependencies = [
   "rich>=13.7,<13.10",
   "simple-ddl-parser==1.7.1",
   "duckdb>=1.0.0,<2.0.0",
-  "soda-core-duckdb>=3.3.20,<3.5.0",
+  "soda-core-duckdb>=3.3.20,<3.5.3",
   # remove setuptools when https://github.com/sodadata/soda-core/issues/2091 is resolved
   "setuptools>=60",
   "python-dotenv~=1.0.0",
@@ -43,7 +43,7 @@ avro = [
 ]
 
 bigquery = [
-  "soda-core-bigquery>=3.3.20,<3.5.0",
+  "soda-core-bigquery>=3.3.20,<3.5.3",
 ]
 
 csv = [
@@ -52,8 +52,8 @@ csv = [
 ]
 
 databricks = [
-  "soda-core-spark-df>=3.3.20,<3.5.0",
-  "soda-core-spark[databricks]>=3.3.20,<3.5.0",
+  "soda-core-spark-df>=3.3.20,<3.5.3",
+  "soda-core-spark[databricks]>=3.3.20,<3.5.3",
   "databricks-sql-connector>=3.7.0,<3.8.0",
   "databricks-sdk<0.45.0",
 ]
@@ -64,11 +64,11 @@ iceberg = [
 
 kafka = [
   "datacontract-cli[avro]",
-  "soda-core-spark-df>=3.3.20,<3.5.0"
+  "soda-core-spark-df>=3.3.20,<3.5.3"
 ]
 
 postgres = [
-  "soda-core-postgres>=3.3.20,<3.5.0"
+  "soda-core-postgres>=3.3.20,<3.5.3"
 ]
 
 s3 = [
@@ -82,15 +82,15 @@ azure = [
 
 snowflake = [
   "snowflake-connector-python[pandas]>=3.6,<3.14",
-  "soda-core-snowflake>=3.3.20,<3.5.0"
+  "soda-core-snowflake>=3.3.20,<3.5.3"
 ]
 
 sqlserver = [
-  "soda-core-sqlserver>=3.3.20,<3.5.0"
+  "soda-core-sqlserver>=3.3.20,<3.5.3"
 ]
 
 trino = [
-  "soda-core-trino>=3.3.20,<3.5.0"
+  "soda-core-trino>=3.3.20,<3.5.3"
 ]
 
 dbt = [

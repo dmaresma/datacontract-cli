@@ -61,6 +61,15 @@ class Server(pyd.BaseModel):
     dataset: str | None = None
     path: str | None = None
     delimiter: str | None = None
+    header: bool | None = None
+    escape: str | None = None
+    allVarchar: bool | None = None
+    allowQuotedNulls: bool | None = None
+    dateformat: str | None = None
+    decimalSeparator: str | None = None
+    newLine: str | None = None
+    timestampformat: str | None = None
+    quote: str | None = None
     endpointUrl: str | None = None
     location: str | None = None
     account: str | None = None
