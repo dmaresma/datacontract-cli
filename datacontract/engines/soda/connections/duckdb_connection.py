@@ -5,6 +5,7 @@ import duckdb
 from datacontract.export.csv_type_converter import convert_to_duckdb_csv_type
 from datacontract.model.data_contract_specification import DataContractSpecification, Server
 from datacontract.model.run import Run
+from datetime import datetime
 
 def get_duckdb_connection(
     data_contract: DataContractSpecification,
@@ -33,7 +34,16 @@ def get_duckdb_connection(
         model_path = path
         try:
             if "{model}" in model_path:
-                model_path = model_path.format(model=model_name)
+                date = datetime.today()
+                month_to_quarter = { 1: "Q1", 2: "Q1", 3: "Q1", 4: "Q2", 5: "Q2", 6: "Q2",
+                7: "Q3", 8: "Q3", 9: "Q3",10: "Q4", 11: "Q4", 12: "Q4" }
+
+                model_path = model_path.format(model=model_name, 
+                                               year=date.strftime('%Y'),
+                                               month=date.strftime('%m'),
+                                               day=date.strftime('%d'), 
+                                               date=date.strftime('%Y-%m-%d'),
+                                               quarter=month_to_quarter.get(date.month))
             run.log_info(f"Creating table {model_name} for {model_path}")
             view_ddl= ""
             if server.format == "json":
@@ -94,6 +104,7 @@ def get_duckdb_connection(
                 con.sql("update extensions;")  # Make sure we have the latest delta extension
                 view_ddl=f"""CREATE VIEW "{model_name}" AS SELECT * FROM delta_scan('{model_path}');"""
 
+            run.log_info("Active view ddl: " +view_ddl)
             con.sql(view_ddl)
         except Exception as inst:
             print(inst)
