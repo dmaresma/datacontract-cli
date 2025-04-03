@@ -282,6 +282,7 @@ def import_fields(
                 quality=odcs_property.get("quality") if odcs_property.get("quality") is not None else [],
                 config=import_field_config(odcs_property, server_type),
                 lineages=odcs_property.get("transformSourceObjects") if odcs_property.get("transformSourceObjects") is not None else None,
+                references=odcs_property.get("references") if odcs_property.get("references") is not None else None
             )
             result[property_name] = field
 
