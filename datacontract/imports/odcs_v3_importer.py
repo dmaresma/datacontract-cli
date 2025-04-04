@@ -265,14 +265,17 @@ def import_fields(
             property_name = odcs_property["name"]
             description = odcs_property.get("description") if odcs_property.get("description") is not None else None
 
-            #array case
-            if odcs_property.get("items") is not None and mapped_type == "array":
-                array_items= Field(type=odcs_property.get("items").get("logicaltype") if odcs_property.get("items").get("logicaltype") is not None else 'object', 
-                            fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type)) 
-            else:
-                array_items=None
-
-
+            #mapped_type is array
+            array_items=None
+            if mapped_type == "array" and odcs_property.get("items") is not None :
+                #nested array object
+                if odcs_property.get("items").get("logicaltype") is not None and odcs_property.get("items").get("logicaltype") == "object":
+                    array_items= Field(type ="object", 
+                            fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type))
+                #array of simple type
+                elif odcs_property.get("items").get("logicaltype") is not None:
+                    array_items= Field(type = odcs_property.get("items").get("logicaltype"))
+              
             field = Field(
                 description=" ".join(description.splitlines()) if description is not None else None,
                 type=mapped_type,
