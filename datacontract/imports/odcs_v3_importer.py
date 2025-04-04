@@ -285,7 +285,7 @@ def import_fields(
                 #lineages=odcs_property.get("transformSourceObjects") if odcs_property.get("transformSourceObjects") is not None else None,
                 references=odcs_property.get("references") if odcs_property.get("references") is not None else None,
                 #nested object
-                fields= import_fields(odcs_property.get("properties"), custom_type_mappings, server_type) 
+                fields= import_fields(odcs_property.get("properties"), custom_type_mappings, server_type)
                 if odcs_property.get("properties") is not None else {},                
             )
 
