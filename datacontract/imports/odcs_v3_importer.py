@@ -269,7 +269,7 @@ def import_fields(
             array_items=None
             if mapped_type == "array" and odcs_property.get("items") is not None :
                 #nested array object
-                if odcs_property.get("items").get("logicaltype") is not None and odcs_property.get("items").get("logicaltype") == "object":
+                if odcs_property.get("items").get("logicaltype") == "object":
                     array_items= Field(type ="object", 
                             fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type))
                 #array of simple type
