@@ -269,7 +269,7 @@ def import_fields(
                 description=" ".join(description.splitlines()) if description is not None else None,
                 type=mapped_type,
                 title=odcs_property.get("businessName"),
-                required=not odcs_property.get("nullable") if odcs_property.get("nullable") is not None else False,
+                required=odcs_property.get("required") if odcs_property.get("required") is not None else False,
                 primaryKey=odcs_property.get("primaryKey")
                 if not has_composite_primary_key(odcs_properties) and odcs_property.get("primaryKey") is not None
                 else False,
@@ -286,21 +286,25 @@ def import_fields(
                 references=odcs_property.get("references") if odcs_property.get("references") is not None else None,
                 #nested object
                 fields= import_fields(odcs_property.get("properties"), custom_type_mappings, server_type)
-                if odcs_property.get("properties") is not None else {},                
+                if odcs_property.get("properties") is not None else {},
             )
 
             #mapped_type is array
-            array_items=None
-            if mapped_type == "array" and odcs_property.get("items") is not None :
+            if field.type == "array" and odcs_property.get("items") is not None :
                 #nested array object
                 if odcs_property.get("items").get("logicaltype") == "object":
-                    array_items= Field(type ="object", 
+                    field.items= Field(type ="object", 
                             fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type))
                 #array of simple type
                 elif odcs_property.get("items").get("logicaltype") is not None:
-                    array_items= Field(type = odcs_property.get("items").get("logicaltype"))
+                    field.items= Field(type = odcs_property.get("items").get("logicaltype"))
+            
+            # enum from quality validValues as enum
+            if field.type is "string":
+                for q in field.quality:
+                    if hasattr(q,"validValues"):
+                        field.enum = q.validValues
 
-            field.items=array_items
             result[property_name] = field
 
         else:
