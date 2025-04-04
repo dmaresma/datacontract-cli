@@ -264,17 +264,6 @@ def import_fields(
         if mapped_type is not None:
             property_name = odcs_property["name"]
             description = odcs_property.get("description") if odcs_property.get("description") is not None else None
-
-            #mapped_type is array
-            array_items=None
-            if mapped_type == "array" and odcs_property.get("items") is not None :
-                #nested array object
-                if odcs_property.get("items").get("logicaltype") == "object":
-                    array_items= Field(type ="object", 
-                            fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type))
-                #array of simple type
-                elif odcs_property.get("items").get("logicaltype") is not None:
-                    array_items= Field(type = odcs_property.get("items").get("logicaltype"))
               
             field = Field(
                 description=" ".join(description.splitlines()) if description is not None else None,
@@ -299,6 +288,18 @@ def import_fields(
                 fields= import_fields(odcs_property.get("properties"), custom_type_mappings, server_type) 
                 if odcs_property.get("properties") is not None else {},                
             )
+
+            #mapped_type is array
+            array_items=None
+            if mapped_type == "array" and odcs_property.get("items") is not None :
+                #nested array object
+                if odcs_property.get("items").get("logicaltype") == "object":
+                    array_items= Field(type ="object", 
+                            fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type))
+                #array of simple type
+                elif odcs_property.get("items").get("logicaltype") is not None:
+                    array_items= Field(type = odcs_property.get("items").get("logicaltype"))
+
             field.items=array_items
             result[property_name] = field
 
