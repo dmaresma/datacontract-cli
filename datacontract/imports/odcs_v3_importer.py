@@ -265,6 +265,14 @@ def import_fields(
             property_name = odcs_property["name"]
             description = odcs_property.get("description") if odcs_property.get("description") is not None else None
 
+            #array case
+            if odcs_property.get("items") is not None and mapped_type == "array":
+                array_items= Field(type=odcs_property.get("items").get("logicaltype") if odcs_property.get("items").get("logicaltype") is not None else 'object', 
+                            fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type)) 
+            else:
+                array_items=None
+
+
             field = Field(
                 description=" ".join(description.splitlines()) if description is not None else None,
                 type=mapped_type,
@@ -281,9 +289,14 @@ def import_fields(
                 tags=odcs_property.get("tags") if odcs_property.get("tags") is not None else None,
                 quality=odcs_property.get("quality") if odcs_property.get("quality") is not None else [],
                 config=import_field_config(odcs_property, server_type),
-                lineages=odcs_property.get("transformSourceObjects") if odcs_property.get("transformSourceObjects") is not None else None,
-                references=odcs_property.get("references") if odcs_property.get("references") is not None else None
+                # TODO move to the model 
+                #lineages=odcs_property.get("transformSourceObjects") if odcs_property.get("transformSourceObjects") is not None else None,
+                references=odcs_property.get("references") if odcs_property.get("references") is not None else None,
+                #nested object
+                fields= import_fields(odcs_property.get("properties"), custom_type_mappings, server_type) 
+                if odcs_property.get("properties") is not None else {},                
             )
+            field.items=array_items
             result[property_name] = field
 
         else:

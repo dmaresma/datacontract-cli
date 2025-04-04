@@ -43,8 +43,8 @@ def execute_data_contract_test(
     run.checks.extend(create_checks(data_contract_specification, server))
 
     # TODO check server is supported type for nicer error messages
-    if server.format == "json" and server.type in ("azure", "s3"):
-       check_jsonschema(run, data_contract_specification, server)
+    #if server.format == "json" and server.type in ("azure", "s3"):
+    #   check_jsonschema(run, data_contract_specification, server)
     # with soda
     check_soda_execute(run, data_contract_specification, server, spark, duckdb_connection)
 
