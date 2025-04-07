@@ -254,6 +254,7 @@ def import_fields(
 ) -> Dict[str, Field]:
     logger = logging.getLogger(__name__)
     result = {}
+    lineage_result = {}
 
     if odcs_properties is None:
         return result
@@ -281,12 +282,12 @@ def import_fields(
                 tags=odcs_property.get("tags") if odcs_property.get("tags") is not None else None,
                 quality=odcs_property.get("quality") if odcs_property.get("quality") is not None else [],
                 config=import_field_config(odcs_property, server_type),
-                # TODO move to the model 
-                #lineages=odcs_property.get("transformSourceObjects") if odcs_property.get("transformSourceObjects") is not None else None,
+                lineage=odcs_property.get("transformSourceObjects") if odcs_property.get("transformSourceObjects") is not None else None,
                 references=odcs_property.get("references") if odcs_property.get("references") is not None else None,
                 #nested object
                 fields= import_fields(odcs_property.get("properties"), custom_type_mappings, server_type)
                 if odcs_property.get("properties") is not None else {},
+                format=odcs_property.get("format") if odcs_property.get("format") is not None else None,
             )
 
             #mapped_type is array
@@ -307,12 +308,14 @@ def import_fields(
 
             result[property_name] = field
 
+
+
         else:
             logger.info(
                 f"Can't map {odcs_property.get('column')} to the Datacontract Mapping types, as there is no equivalent or special mapping. Consider introducing a customProperty 'dc_mapping_{odcs_property.get('logicalName')}' that defines your expected type as the 'value'"
             )
 
-    return result
+    return result, lineage_result
 
 
 def map_type(odcs_type: str, custom_mappings: Dict[str, str]) -> str | None:

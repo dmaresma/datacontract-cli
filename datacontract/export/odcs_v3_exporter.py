@@ -217,7 +217,7 @@ def to_property(field_name: str, field: Field) -> dict:
     if field.description is not None:
         property["description"] = field.description
     if field.required is not None:
-        property["nullable"] = not field.required
+        property["required"] = field.required
     if field.unique is not None:
         property["unique"] = field.unique
     if field.classification is not None:
@@ -259,6 +259,8 @@ def to_property(field_name: str, field: Field) -> dict:
         property["logicalTypeOptions"]["minimum"] = field.minimum
     if field.maximum is not None:
         property["logicalTypeOptions"]["maximum"] = field.maximum
+    if field.enum is not None:
+        property["logicalTypeOptions"]["validValues"] = field.enum
     if field.exclusiveMinimum is not None:
         property["logicalTypeOptions"]["exclusiveMinimum"] = field.exclusiveMinimum
     if field.exclusiveMaximum is not None:

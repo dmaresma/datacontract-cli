@@ -193,6 +193,7 @@ class Field(pyd.BaseModel):
     examples: List[Any] | None = None
     quality: List[Quality] | None = []
     config: Dict[str, Any] | None = None
+    lineage: Dict[str, Any] | None = None
  
     model_config = pyd.ConfigDict(
         extra="allow",
