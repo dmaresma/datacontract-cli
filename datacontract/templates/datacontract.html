@@ -4,9 +4,23 @@
   <title>Data Contract</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
   {# <script src="https://cdn.tailwindcss.com"></script> #}
   <style>
     {{ style | safe }}
+  </style>
+  <style type="text/css">
+    .diagram-container {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid #ccc;
+      position: relative;
+      margin-bottom: 10px;
+    }
+    svg {
+      cursor: grab;
+    }
   </style>
 </head>
 <body class="h-full">
@@ -73,6 +87,15 @@
 
       <div>
         <div class="space-y-6 mt-6">
+          {% if datacontract.diagram() %}
+          <div class="px-4 sm:px-0">
+            <h1 class="text-base font-semibold leading-6 text-gray-900" id="diagram">Diagram</h1>
+            <p class="text-sm text-gray-500">Entity relationship diagram</p>
+          </div>
+          <section id="diagram" class="mt-2 divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-lg">
+            {{ render_partial('partials/erdiagram.html', datacontract = datacontract) }}
+          </section>
+          {% endif %}
           <section id="information">
             {{ render_partial('partials/datacontract_information.html', datacontract = datacontract) }}
           </section>

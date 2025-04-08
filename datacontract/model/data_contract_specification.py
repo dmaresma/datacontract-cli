@@ -28,6 +28,8 @@ DATACONTRACT_TYPES = [
     "record",
     "struct",
     "null",
+    "geography",
+    "geometry",
 ]
 
 
@@ -50,6 +52,7 @@ class ServerRole(pyd.BaseModel):
 
 
 class Server(pyd.BaseModel):
+    name: str | None = None
     type: str | None = None
     description: str | None = None
     environment: str | None = None
@@ -58,6 +61,15 @@ class Server(pyd.BaseModel):
     dataset: str | None = None
     path: str | None = None
     delimiter: str | None = None
+    header: bool | None = None
+    escape: str | None = None
+    allVarchar: bool | None = None
+    allowQuotedNulls: bool | None = None
+    dateformat: str | None = None
+    decimalSeparator: str | None = None
+    newLine: str | None = None
+    timestampformat: str | None = None
+    quote: str | None = None
     endpointUrl: str | None = None
     location: str | None = None
     account: str | None = None
@@ -181,7 +193,7 @@ class Field(pyd.BaseModel):
     examples: List[Any] | None = None
     quality: List[Quality] | None = []
     config: Dict[str, Any] | None = None
-
+ 
     model_config = pyd.ConfigDict(
         extra="allow",
     )
@@ -325,3 +337,23 @@ class DataContractSpecification(pyd.BaseModel):
             sort_keys=False,
             allow_unicode=True,
         )
+
+    def diagram(self) -> str | None:
+        mmd_entity = ""
+        mmd_references = []
+        try:
+            for model_name, model in self.models.items():
+                entity_block=""
+                for field_name, field in model.fields.items():
+                    entity_block += f"\t{ field_name.replace("#","Nb").replace(" ","_").replace("/","by")}{'🔑' if field.primaryKey or (field.unique and field.required) else ''}{'⌘' if field.references else''} {field.type}\n"
+                    if field.references:
+                        mmd_references.append(f'"📑{field.references.split(".")[0] if "." in field.references else ""}"' + "}o--{ ||"+f'"📑{model_name}"')
+                mmd_entity+= f'\t"📑{model_name}"'+'{\n' + entity_block + '}\n'
+
+            if mmd_entity == "":
+                return None
+            else:
+                return f"{mmd_entity}\n"
+        except Exception as e:
+           print(f"error : {e}, {self}")
+           return None

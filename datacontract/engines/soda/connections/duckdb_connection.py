@@ -1,13 +1,23 @@
 import os
-
+from typing import Any
 import duckdb
 
 from datacontract.export.csv_type_converter import convert_to_duckdb_csv_type
+from datacontract.model.data_contract_specification import DataContractSpecification, Server
 from datacontract.model.run import Run
+from datetime import datetime
 
+def get_duckdb_connection(
+    data_contract: DataContractSpecification,
+    server: Server,
+    run: Run,
+    duckdb_connection: duckdb.DuckDBPyConnection = None,
+):
+    if duckdb_connection is None:
+        con = duckdb.connect(database=":memory:")
+    else:
+        con = duckdb_connection
 
-def get_duckdb_connection(data_contract, server, run: Run):
-    con = duckdb.connect(database=":memory:")
     path: str = ""
     if server.type == "local":
         path = server.path
@@ -22,41 +32,86 @@ def get_duckdb_connection(data_contract, server, run: Run):
         setup_azure_connection(con, server)
     for model_name, model in data_contract.models.items():
         model_path = path
-        if "{model}" in model_path:
-            model_path = model_path.format(model=model_name)
-        run.log_info(f"Creating table {model_name} for {model_path}")
+        try:
+            if "{model}" in model_path:
+                date = datetime.today()
+                month_to_quarter = { 1: "Q1", 2: "Q1", 3: "Q1", 4: "Q2", 5: "Q2", 6: "Q2",
+                7: "Q3", 8: "Q3", 9: "Q3",10: "Q4", 11: "Q4", 12: "Q4" }
 
-        if server.format == "json":
-            format = "auto"
-            if server.delimiter == "new_line":
-                format = "newline_delimited"
-            elif server.delimiter == "array":
-                format = "array"
-            con.sql(f"""
-                        CREATE VIEW "{model_name}" AS SELECT * FROM read_json_auto('{model_path}', format='{format}', hive_partitioning=1);
-                        """)
-        elif server.format == "parquet":
-            con.sql(f"""
-                        CREATE VIEW "{model_name}" AS SELECT * FROM read_parquet('{model_path}', hive_partitioning=1);
-                        """)
-        elif server.format == "csv":
-            columns = to_csv_types(model)
-            run.log_info("Using columns: " + str(columns))
-            if columns is None:
-                con.sql(
-                    f"""CREATE VIEW "{model_name}" AS SELECT * FROM read_csv('{model_path}', hive_partitioning=1);"""
-                )
-            else:
-                con.sql(
-                    f"""CREATE VIEW "{model_name}" AS SELECT * FROM read_csv('{model_path}', hive_partitioning=1, columns={columns});"""
-                )
-        elif server.format == "delta":
-            con.sql("update extensions;")  # Make sure we have the latest delta extension
-            con.sql(f"""CREATE VIEW "{model_name}" AS SELECT * FROM delta_scan('{model_path}');""")
+                model_path = model_path.format(model=model_name, 
+                                               year=date.strftime('%Y'),
+                                               month=date.strftime('%m'),
+                                               day=date.strftime('%d'), 
+                                               date=date.strftime('%Y-%m-%d'),
+                                               quarter=month_to_quarter.get(date.month))
+            run.log_info(f"Creating table {model_name} for {model_path}")
+            view_ddl= ""
+            if server.format == "json":
+                json_format = "auto"
+                if server.delimiter == "new_line":
+                    json_format = "newline_delimited"
+                elif server.delimiter == "array":
+                    json_format = "array"
+                view_ddl=f"""
+                            CREATE VIEW "{model_name}" AS SELECT * FROM read_json_auto('{model_path}', format='{json_format}', hive_partitioning=1);
+                            """
+            elif server.format == "parquet":
+                view_ddl=f"""
+                            CREATE VIEW "{model_name}" AS SELECT * FROM read_parquet('{model_path}', hive_partitioning=1);
+                            """
+            elif server.format == "csv":
+                columns = to_csv_types(model)                
+                run.log_info("Using columns: " + str(columns))
+                # Start with the required parameter.
+                params = ["hive_partitioning=1"]
+
+                # Define a mapping for CSV parameters: server attribute -> read_csv parameter name.
+                param_mapping = {
+                    "delimiter": "delim",  # Map server.delimiter to 'delim'
+                    "header": "header",
+                    "escape": "escape",
+                    "allVarchar": "all_varchar",
+                    "allowQuotedNulls": "allow_quoted_nulls",
+                    "dateformat": "dateformat",
+                    "decimalSeparator": "decimal_separator",
+                    "newLine": "new_line",
+                    "timestampformat": "timestampformat",
+                    "quote": "quote",
+                    
+                }
+                for server_attr, read_csv_param in param_mapping.items():
+                    value = getattr(server, server_attr, None)
+                    if value is not None:
+                        # Wrap string values in quotes.
+                        if isinstance(value, str):
+                            params.append(f"{read_csv_param}='{value}'")
+                        else:
+                            params.append(f"{read_csv_param}={value}")
+
+                # Add columns if they exist.
+                if columns is not None:
+                    params.append(f"columns={columns}")
+
+                # Build the parameter string.
+                params_str = ", ".join(params)
+
+                # Create the view with the assembled parameters.
+                view_ddl = f"""
+                    CREATE VIEW "{model_name}" AS
+                    SELECT * FROM read_csv('{model_path}', {params_str});
+                """
+            elif server.format == "delta":
+                con.sql("update extensions;")  # Make sure we have the latest delta extension
+                view_ddl=f"""CREATE VIEW "{model_name}" AS SELECT * FROM delta_scan('{model_path}');"""
+
+            run.log_info("Active view ddl: " +view_ddl)
+            con.sql(view_ddl)
+        except Exception as inst:
+            print(inst)
+            continue
     return con
 
-
-def to_csv_types(model) -> dict:
+def to_csv_types(model) -> dict[Any, str | None] | None:
     if model is None:
         return None
     columns = {}
@@ -64,7 +119,6 @@ def to_csv_types(model) -> dict:
     for field_name, field in model.fields.items():
         columns[field_name] = convert_to_duckdb_csv_type(field)
     return columns
-
 
 def setup_s3_connection(con, server):
     s3_region = os.getenv("DATACONTRACT_S3_REGION")

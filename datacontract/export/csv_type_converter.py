@@ -33,4 +33,6 @@ def convert_to_duckdb_csv_type(field) -> None | str:
         return "VARCHAR"
     if type.lower() in ["null"]:
         return "SQLNULL"
+    if type.lower() in ["json"]:
+        return "JSON"
     return "VARCHAR"

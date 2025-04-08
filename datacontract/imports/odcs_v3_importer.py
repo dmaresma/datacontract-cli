@@ -17,6 +17,7 @@ from datacontract.model.data_contract_specification import (
     Quality,
     Retention,
     Server,
+    ServerRole,
     ServiceLevel,
     Terms,
 )
@@ -98,6 +99,7 @@ def import_servers(odcs_contract: Dict[str, Any]) -> Dict[str, Server] | None:
             continue
 
         server = Server()
+        server.name = server_name
         server.type = odcs_server.get("type")
         server.description = odcs_server.get("description")
         server.environment = odcs_server.get("environment")
@@ -120,9 +122,13 @@ def import_servers(odcs_contract: Dict[str, Any]) -> Dict[str, Server] | None:
         server.dataProductId = odcs_server.get("dataProductId")
         server.outputPortId = odcs_server.get("outputPortId")
         server.driver = odcs_server.get("driver")
-        server.roles = odcs_server.get("roles")
+        server.roles = [ServerRole(name = role.get("role"),
+                                   description = role.get("description"),
+                                   model_config = role
+                                    ) for role in odcs_server.get("roles")] if odcs_server.get("roles") is not None else None
+        server.storageAccount = odcs_server.get("storageAccount")
 
-        servers[server_name] = server
+        servers[server.name] = server
     return servers
 
 
@@ -190,7 +196,8 @@ def import_models(odcs_contract: Dict[str, Any]) -> Dict[str, Model]:
         schema_physical_name = odcs_schema.get("physicalName")
         schema_description = odcs_schema.get("description") if odcs_schema.get("description") is not None else ""
         model_name = schema_physical_name if schema_physical_name is not None else schema_name
-        model = Model(description=" ".join(schema_description.splitlines()), type="table")
+        type =  odcs_schema.get("physicalType") if odcs_schema.get("physicalType") is not None else "table"
+        model = Model(description=" ".join(schema_description.splitlines()), type=type)
         model.fields = import_fields(
             odcs_schema.get("properties"), custom_type_mappings, server_type=get_server_type(odcs_contract)
         )
@@ -233,7 +240,7 @@ def import_field_config(odcs_property: Dict[str, Any], server_type=None) -> Dict
             config["redshiftType"] = physical_type
         elif server_type == "sqlserver":
             config["sqlserverType"] = physical_type
-        elif server_type == "databricksType":
+        elif server_type == "databricks":
             config["databricksType"] = physical_type
         else:
             config["physicalType"] = physical_type
@@ -257,14 +264,16 @@ def import_fields(
 
     for odcs_property in odcs_properties:
         mapped_type = map_type(odcs_property.get("logicalType"), custom_type_mappings)
+
         if mapped_type is not None:
             property_name = odcs_property["name"]
             description = odcs_property.get("description") if odcs_property.get("description") is not None else None
+              
             field = Field(
                 description=" ".join(description.splitlines()) if description is not None else None,
                 type=mapped_type,
                 title=odcs_property.get("businessName"),
-                required=not odcs_property.get("nullable") if odcs_property.get("nullable") is not None else False,
+                required=odcs_property.get("required") if odcs_property.get("required") is not None else False,
                 primaryKey=odcs_property.get("primaryKey")
                 if not has_composite_primary_key(odcs_properties) and odcs_property.get("primaryKey") is not None
                 else False,
@@ -276,8 +285,32 @@ def import_fields(
                 tags=odcs_property.get("tags") if odcs_property.get("tags") is not None else None,
                 quality=odcs_property.get("quality") if odcs_property.get("quality") is not None else [],
                 config=import_field_config(odcs_property, server_type),
+                lineage=odcs_property.get("transformSourceObjects") if odcs_property.get("transformSourceObjects") is not None else None,
+                references=odcs_property.get("references") if odcs_property.get("references") is not None else None,
+                #nested object
+                fields= import_fields(odcs_property.get("properties"), custom_type_mappings, server_type)
+                if odcs_property.get("properties") is not None else {},
+                format=odcs_property.get("format") if odcs_property.get("format") is not None else None,
             )
+
+            #mapped_type is array
+            if field.type == "array" and odcs_property.get("items") is not None :
+                #nested array object
+                if odcs_property.get("items").get("logicalType") == "object":
+                    field.items= Field(type="object", 
+                            fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type))
+                #array of simple type
+                elif odcs_property.get("items").get("logicalType") is not None:
+                    field.items= Field(type = odcs_property.get("items").get("logicalType"))
+            
+            # enum from quality validValues as enum
+            if field.type is "string":
+                for q in field.quality:
+                    if hasattr(q,"validValues"):
+                        field.enum = q.validValues
+
             result[property_name] = field
+            
         else:
             logger.info(
                 f"Can't map {odcs_property.get('column')} to the Datacontract Mapping types, as there is no equivalent or special mapping. Consider introducing a customProperty 'dc_mapping_{odcs_property.get('logicalName')}' that defines your expected type as the 'value'"
