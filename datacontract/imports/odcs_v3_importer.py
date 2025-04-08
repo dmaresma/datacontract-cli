@@ -17,6 +17,7 @@ from datacontract.model.data_contract_specification import (
     Quality,
     Retention,
     Server,
+    ServerRole,
     ServiceLevel,
     Terms,
 )
@@ -121,7 +122,10 @@ def import_servers(odcs_contract: Dict[str, Any]) -> Dict[str, Server] | None:
         server.dataProductId = odcs_server.get("dataProductId")
         server.outputPortId = odcs_server.get("outputPortId")
         server.driver = odcs_server.get("driver")
-        server.roles = odcs_server.get("roles")
+        server.roles = [ServerRole(name = role.get("role"),
+                                   description = role.get("description"),
+                                   model_config = role
+                                    ) for role in odcs_server.get("roles")] if odcs_server.get("roles") is not None else None
         server.storageAccount = odcs_server.get("storageAccount")
 
         servers[server.name] = server
