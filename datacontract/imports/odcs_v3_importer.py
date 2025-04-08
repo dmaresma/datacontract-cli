@@ -310,9 +310,7 @@ def import_fields(
                         field.enum = q.validValues
 
             result[property_name] = field
-
-
-
+            
         else:
             logger.info(
                 f"Can't map {odcs_property.get('column')} to the Datacontract Mapping types, as there is no equivalent or special mapping. Consider introducing a customProperty 'dc_mapping_{odcs_property.get('logicalName')}' that defines your expected type as the 'value'"
