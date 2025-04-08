@@ -254,7 +254,6 @@ def import_fields(
 ) -> Dict[str, Field]:
     logger = logging.getLogger(__name__)
     result = {}
-    lineage_result = {}
 
     if odcs_properties is None:
         return result
@@ -293,12 +292,12 @@ def import_fields(
             #mapped_type is array
             if field.type == "array" and odcs_property.get("items") is not None :
                 #nested array object
-                if odcs_property.get("items").get("logicaltype") == "object":
-                    field.items= Field(type ="object", 
+                if odcs_property.get("items").get("logicalType") == "object":
+                    field.items= Field(type="object", 
                             fields=import_fields(odcs_property.get("items").get("properties"), custom_type_mappings, server_type))
                 #array of simple type
-                elif odcs_property.get("items").get("logicaltype") is not None:
-                    field.items= Field(type = odcs_property.get("items").get("logicaltype"))
+                elif odcs_property.get("items").get("logicalType") is not None:
+                    field.items= Field(type = odcs_property.get("items").get("logicalType"))
             
             # enum from quality validValues as enum
             if field.type is "string":
@@ -315,7 +314,7 @@ def import_fields(
                 f"Can't map {odcs_property.get('column')} to the Datacontract Mapping types, as there is no equivalent or special mapping. Consider introducing a customProperty 'dc_mapping_{odcs_property.get('logicalName')}' that defines your expected type as the 'value'"
             )
 
-    return result, lineage_result
+    return result
 
 
 def map_type(odcs_type: str, custom_mappings: Dict[str, str]) -> str | None:
