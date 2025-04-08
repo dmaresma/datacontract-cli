@@ -1,8 +1,7 @@
   <div class="flex items-center gap-x-4">
     <div class="diagram-container" id="diagram-container">
       <pre class="mermaid">
-        erDiagram
-            {{ datacontract.diagram() }}
+        {{ datacontract.to_mermaid() }}
       </pre>
     </div>
     <script type="module">

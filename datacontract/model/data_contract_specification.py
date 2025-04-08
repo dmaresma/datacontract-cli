@@ -338,8 +338,8 @@ class DataContractSpecification(pyd.BaseModel):
             allow_unicode=True,
         )
 
-    def diagram(self) -> str | None:
-        mmd_entity = ""
+    def to_mermaid(self) -> str | None:
+        mmd_entity = "erDiagram\n\t"
         mmd_references = []
         try:
             for model_name, model in self.models.items():
