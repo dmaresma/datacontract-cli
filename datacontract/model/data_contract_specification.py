@@ -341,19 +341,25 @@ class DataContractSpecification(pyd.BaseModel):
     def to_mermaid(self) -> str | None:
         mmd_entity = "erDiagram\n\t"
         mmd_references = []
+        mmd_relations = []
         try:
             for model_name, model in self.models.items():
                 entity_block=""
                 for field_name, field in model.fields.items():
-                    entity_block += f"\t{ field_name.replace("#","Nb").replace(" ","_").replace("/","by")}{'🔑' if field.primaryKey or (field.unique and field.required) else ''}{'⌘' if field.references else''} {field.type}\n"
+                    entity_block += f"\t{ field_name.replace('#','Nb').replace(' ','_').replace('/','by')}{'🔑' if field.primaryKey or (field.unique and field.required) else ''}{'⌘' if field.references else''} {field.type}\n"
                     if field.references:
-                        mmd_references.append(f'"📑{field.references.split(".")[0] if "." in field.references else ""}"' + "}o--{ ||"+f'"📑{model_name}"')
+                        mmd_references.append(f'"📑{field.references.split(".")[0] if "." in field.references else ""}"' + "||--o{" +f'"📑{model_name}"')
                 mmd_entity+= f'\t"📑{model_name}"'+'{\n' + entity_block + '}\n'
-
+                mmd_relations.append(model_name)
+            for i in range(len(mmd_relations)):
+                for j in range(i + 1, len(mmd_relations)):
+                     mmd_entity+= f'\t"📑{mmd_relations[i]}"'+ " ||--o{ " + f'"📑{mmd_relations[j]}"' + ' : "applies to"' + '\n'
             if mmd_entity == "":
                 return None
             else:
                 return f"{mmd_entity}\n"
+            
         except Exception as e:
            print(f"error : {e}, {self}")
            return None
+        
