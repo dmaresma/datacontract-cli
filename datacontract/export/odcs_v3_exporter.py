@@ -152,8 +152,7 @@ def to_odcs_schema(model_key, model_value: Model) -> SchemaObject:
     # Export custom properties for the model
     if model_value.get_all_custom_properties():
         schema_obj.customProperties = [
-            CustomProperty(property=key, value=value)
-            for key, value in model_value.get_all_custom_properties().items()
+            CustomProperty(property=key, value=value) for key, value in model_value.get_all_custom_properties().items()
         ]
 
     return schema_obj
@@ -233,8 +232,7 @@ def to_property(field_name: str, field: Field) -> SchemaProperty:
     # Export custom properties for the field
     if field.get_all_custom_properties():
         property.customProperties = [
-            CustomProperty(property=key, value=value)
-            for key, value in field.get_all_custom_properties().items()
+            CustomProperty(property=key, value=value) for key, value in field.get_all_custom_properties().items()
         ]
 
     return property
