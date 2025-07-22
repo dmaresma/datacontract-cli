@@ -146,21 +146,15 @@ def to_odcs_schema(model_key, model_value: Model) -> SchemaObject:
     if model_value.description is not None:
         schema_obj.description = model_value.description
 
-    properties = to_properties(model_value.fields)
-    if properties:
-        schema_obj.properties = properties
+    # Export fields with custom properties
+    schema_obj.properties = to_properties(model_value.fields)
 
-    model_quality = to_odcs_quality_list(model_value.quality)
-    if len(model_quality) > 0:
-        schema_obj.quality = model_quality
-
-    custom_properties = []
-    if model_value.model_extra is not None:
-        for key, value in model_value.model_extra.items():
-            custom_properties.append(CustomProperty(property=key, value=value))
-
-    if len(custom_properties) > 0:
-        schema_obj.customProperties = custom_properties
+    # Export custom properties for the model
+    if model_value.get_all_custom_properties():
+        schema_obj.customProperties = [
+            CustomProperty(property=key, value=value)
+            for key, value in model_value.get_all_custom_properties().items()
+        ]
 
     return schema_obj
 
@@ -230,89 +224,18 @@ def to_physical_type(config: Dict[str, Any]) -> str | None:
 def to_property(field_name: str, field: Field) -> SchemaProperty:
     property = SchemaProperty(name=field_name)
 
-    if field.fields:
-        properties = []
-        for field_name_, field_ in field.fields.items():
-            property_ = to_property(field_name_, field_)
-            properties.append(property_)
-        property.properties = properties
-
-    if field.items:
-        items = to_property(field_name, field.items)
-        items.name = None  # Clear the name for items
-        property.items = items
-
-    if field.title is not None:
-        property.businessName = field.title
-
     if field.type is not None:
-        property.logicalType = to_logical_type(field.type)
-        property.physicalType = to_physical_type(field.config) or field.type
+        property.physicalType = field.type
 
     if field.description is not None:
         property.description = field.description
 
-    if field.required is not None:
-        property.required = field.required
-
-    if field.unique is not None:
-        property.unique = field.unique
-
-    if field.classification is not None:
-        property.classification = field.classification
-
-    if field.examples is not None:
-        property.examples = field.examples.copy()
-
-    if field.example is not None:
-        property.examples = [field.example]
-
-    if field.primaryKey is not None and field.primaryKey:
-        property.primaryKey = field.primaryKey
-        property.primaryKeyPosition = 1
-
-    if field.primary is not None and field.primary:
-        property.primaryKey = field.primary
-        property.primaryKeyPosition = 1
-
-    custom_properties = []
-    if field.model_extra is not None:
-        for key, value in field.model_extra.items():
-            custom_properties.append(CustomProperty(property=key, value=value))
-
-    if field.pii is not None:
-        custom_properties.append(CustomProperty(property="pii", value=field.pii))
-
-    if len(custom_properties) > 0:
-        property.customProperties = custom_properties
-
-    if field.tags is not None and len(field.tags) > 0:
-        property.tags = field.tags
-
-    logical_type_options = {}
-    if field.minLength is not None:
-        logical_type_options["minLength"] = field.minLength
-    if field.maxLength is not None:
-        logical_type_options["maxLength"] = field.maxLength
-    if field.pattern is not None:
-        logical_type_options["pattern"] = field.pattern
-    if field.minimum is not None:
-        logical_type_options["minimum"] = field.minimum
-    if field.maximum is not None:
-        logical_type_options["maximum"] = field.maximum
-    if field.exclusiveMinimum is not None:
-        logical_type_options["exclusiveMinimum"] = field.exclusiveMinimum
-    if field.exclusiveMaximum is not None:
-        logical_type_options["exclusiveMaximum"] = field.exclusiveMaximum
-
-    if logical_type_options:
-        property.logicalTypeOptions = logical_type_options
-
-    if field.quality is not None:
-        quality_list = field.quality
-        quality_property = to_odcs_quality_list(quality_list)
-        if len(quality_property) > 0:
-            property.quality = quality_property
+    # Export custom properties for the field
+    if field.get_all_custom_properties():
+        property.customProperties = [
+            CustomProperty(property=key, value=value)
+            for key, value in field.get_all_custom_properties().items()
+        ]
 
     return property
 
