@@ -77,7 +77,7 @@ def import_csv(
     fields = {}
     for i in range(tbl.shape[1]):
         field_name = tbl.columns[i]
-        dc_type = dc_types[i]
+        dc_type = dc_types[i] if i < len(dc_types) else "string"
 
         ## specifying "integer" rather than "bigint" looks nicer
         if (
