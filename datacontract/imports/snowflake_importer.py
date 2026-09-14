@@ -214,6 +214,30 @@ def local_data_quality_monitoring_results_query() -> str:
 """
 
 
+def account_usage_lineage_query() -> str:
+    return """
+        SELECT
+            cols.TABLE_NAME,
+            cols.COLUMN_NAME,
+            ARRAY_AGG(lin.SOURCE_OBJECT_NAME) as UPSTREAM_SOURCES
+        FROM (
+            SELECT TABLE_NAME, COLUMN_NAME, TABLE_SCHEMA
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_CATALOG = CURRENT_DATABASE()
+            AND TABLE_SCHEMA = CURRENT_SCHEMA()
+        ) AS cols,
+        LATERAL TABLE(GET_LINEAGE(
+            OBJECT_NAME => CURRENT_DATABASE() || '.' || cols.TABLE_SCHEMA || '.' || cols.TABLE_NAME || '.' || cols.COLUMN_NAME,
+            OBJECT_DOMAIN => 'Column',
+            DIRECTION => 'upstream',
+            DISTANCE => 1
+        )) AS lin
+        WHERE lin.DISTANCE = 1
+        AND lin.SOURCE_OBJECT_DOMAIN = 'Column'
+        GROUP BY cols.TABLE_NAME, cols.COLUMN_NAME
+    """
+
+
 def _quote_identifier(identifier: str) -> str:
     """Double-quote a Snowflake identifier, escaping any inner double-quotes."""
     return '"' + identifier.replace('"', '""') + '"'
@@ -241,8 +265,11 @@ def import_information_schema(conn) -> Dict[str, List[Dict]]:
         cur.execute_async(local_data_quality_monitoring_results_query())
         query_pool["quality"] = str(cur.sfqid)
 
-    # optional queries that may fail due to insufficient privileges — return empty list instead of crashing
-    optional_queries = {"tags", "quality"}
+        cur.execute_async(account_usage_lineage_query())
+        query_pool["lineage"] = str(cur.sfqid)
+
+    # optional queries that may fail due to insufficient privileges or non-Enterprise edition — return empty list instead of crashing
+    optional_queries = {"tags", "quality", "lineage"}
 
     # wait for all queries to finish; cap at 5 minutes to avoid hanging indefinitely
     _QUERY_TIMEOUT_S = 300
@@ -282,13 +309,17 @@ def import_information_schema(conn) -> Dict[str, List[Dict]]:
 
 
 def schema_properties_cleansing(
-    properties: List[SchemaProperty], properties_tags: List[Dict[str, Any]], properties_quality: List[Dict[str, Any]]
+    properties: List[SchemaProperty],
+    properties_tags: List[Dict[str, Any]],
+    properties_quality: List[Dict[str, Any]],
+    properties_lineage: List[Dict[str, Any]] = None,
 ) -> List[SchemaProperty]:
     """
     Cleanses the properties list by removing None values and ensuring all required fields are present.
     """
     tags_adapter = TypeAdapter(list[str])
     quality_adapter = TypeAdapter(list[DataQuality])
+    lineage_adapter = TypeAdapter(list[str])
     cleansed_properties = []
 
     for prop in properties:
@@ -307,6 +338,11 @@ def schema_properties_cleansing(
         ]
         quality = [
             q["QUALITY"] for q in properties_quality if q["COLUMN_NAME"] == prop.name and q["COLUMN_NAME"] is not None
+        ]
+        lineage = [
+            entry["UPSTREAM_SOURCES"]
+            for entry in (properties_lineage or [])
+            if entry["COLUMN_NAME"] == prop.name and entry["COLUMN_NAME"] is not None
         ]
 
         prop = create_property(
@@ -327,6 +363,12 @@ def schema_properties_cleansing(
             dimensions=dimensions,
             element_type=element_type,
         )
+
+        if lineage:
+            upstream_sources = lineage_adapter.validate_json(lineage[0] if isinstance(lineage[0], str) else "[]")
+            if upstream_sources:
+                prop.transformSourceObjects = upstream_sources
+
         cleansed_properties.append(prop)
 
     return cleansed_properties
@@ -441,9 +483,13 @@ def import_snowflake_from_connector(
             if quality["TABLE_NAME"] == schema_item.name and quality["TYPES"] == "COLUMN"
         ]
 
+        properties_lineage = [
+            entry for entry in result_sets.get("lineage", []) if entry["TABLE_NAME"] == schema_item.name
+        ]
+
         if schema_item.properties is not None:
             schema_item.properties = schema_properties_cleansing(
-                schema_item.properties, properties_tags, properties_quality
+                schema_item.properties, properties_tags, properties_quality, properties_lineage
             )
             schema_item.properties.sort(key=property_customs_ordinal_position_sort)
         enhanced_schemas.append(schema_item)
